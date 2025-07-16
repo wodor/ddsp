@@ -7,12 +7,12 @@
   - _Requirements: All_
 
 - [ ] 2. Implement Configuration Management
-  - [ ] 2.1 Create configuration storage service
+  - [x] 2.1 Create configuration storage service
     - Implement methods to save and load configuration from local storage
     - Add encryption for sensitive data like GitHub tokens
     - _Requirements: 1.2, 1.3, 1.6_
   
-  - [ ] 2.2 Build GitHub token management UI
+  - [x] 2.2 Build GitHub token management UI
     - Create form for entering GitHub token
     - Implement token validation against GitHub API
     - Add functionality to clear/reset token
