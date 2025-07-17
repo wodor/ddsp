@@ -1,7 +1,7 @@
 /**
  * Sample QA Build action definition
  */
-import { CatalogAction } from '../types/catalog';
+import type { CatalogAction } from '../types/catalog';
 import { EnhancedInputType, InputDataSource } from '../services/actionCreator';
 
 /**

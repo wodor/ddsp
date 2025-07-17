@@ -32,6 +32,8 @@ The Developer Self-Service Portal - DSSP is a web application that provides a us
 5. WHEN the curated list grows THEN the system SHALL provide search and filtering capabilities.
 6. WHEN adding actions to the catalog THEN the system SHALL support manual curation and enhancement of actions.
 7. WHEN parsing GitHub workflow YAML THEN the system SHALL extract input structure and metadata.
+8. WHEN a user provides a GitHub workflow URL THEN the system SHALL be able to parse it and generate integration code.
+9. WHEN generating integration code THEN the system SHALL provide action definitions, form components, and registration code.
 
 ### Requirement 3: Enhanced Workflow Execution Forms
 

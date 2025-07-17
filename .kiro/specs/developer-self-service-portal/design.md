@@ -313,22 +313,98 @@ Input options can be populated from various sources:
 - **Computed Values**: Options generated based on other inputs or context
 - **External APIs**: Data from other systems or services (future enhancement)
 
+## GitHub Actions SDK
+
+To streamline the process of integrating GitHub Actions into the Developer Self-Service Portal, we've developed a dedicated SDK that provides utilities for parsing, generating, and enhancing GitHub Actions.
+
+### 1. SDK Architecture
+
+The GitHub Actions SDK consists of three main modules:
+
+```mermaid
+graph TD
+    A[GitHub Actions SDK] --> B[Parser Module]
+    A --> C[Generator Module]
+    A --> D[Types Module]
+    
+    B --> E[parseGitHubWorkflowUrl]
+    B --> F[fetchWorkflowMetadataFromUrl]
+    B --> G[generateActionIdFromUrl]
+    
+    C --> H[generateAction]
+    C --> I[generateActionCode]
+    C --> J[enhanceInputs]
+    
+    D --> K[Type Definitions]
+```
+
+#### 1.1 Parser Module
+
+The Parser module provides utilities for parsing GitHub workflow URLs and files:
+
+- **parseGitHubWorkflowUrl**: Parses a GitHub workflow URL and extracts the owner, repo, and path
+- **fetchWorkflowMetadataFromUrl**: Fetches workflow metadata from a GitHub URL
+- **generateActionIdFromUrl**: Generates a unique ID from a GitHub workflow URL
+
+#### 1.2 Generator Module
+
+The Generator module provides utilities for generating action definitions and form components:
+
+- **generateAction**: Generates an action definition from workflow metadata
+- **generateActionCode**: Generates all code for an action (definition, form component, registration)
+- **enhanceInputs**: Enhances inputs with UI components based on their type and name
+- **generateTags**: Generates tags for an action based on its metadata
+- **generateDocumentation**: Generates documentation for an action
+
+#### 1.3 Types Module
+
+The Types module provides type definitions for the SDK:
+
+- **ParsedWorkflowUrl**: Parsed components of a GitHub workflow URL
+- **WorkflowMetadata**: Workflow metadata extracted from a workflow file
+- **ActionGenerationOptions**: Options for generating an action from a workflow
+- **ActionGenerationResult**: Result of generating an action from a workflow
+
+### 2. Integration Workflow
+
+The SDK enables a streamlined workflow for integrating GitHub Actions:
+
+1. **URL Parsing**: Parse a GitHub workflow URL to extract owner, repo, and path
+2. **Metadata Fetching**: Fetch workflow metadata using the GitHub API
+3. **Action Generation**: Generate an action definition with enhanced inputs
+4. **Code Generation**: Generate form components and registration code
+5. **Integration**: Add the generated code to the application
+
+### 3. Enhanced Input Detection
+
+The SDK automatically detects and enhances inputs based on their type and name:
+
+- **Branch Inputs**: Inputs with "branch" in the name are enhanced with a branch selector
+- **Repository Inputs**: Inputs with "repo" in the name are enhanced with a repository selector
+- **User Inputs**: Inputs with "user" in the name are enhanced with a user selector
+- **Date Inputs**: Inputs with "date" in the name are enhanced with a date picker
+- **Duration Inputs**: Inputs with "duration" in the name are enhanced with a duration selector
+- **Boolean Inputs**: Boolean inputs are enhanced with a conditional component
+- **Choice Inputs**: Inputs with options are enhanced with a multi-select component
+
 ## Manual Action Creation Approach
 
-The Developer Self-Service Portal will take a bespoke approach to action creation, focusing on quality over quantity:
+The Developer Self-Service Portal takes a bespoke approach to action creation, focusing on quality over quantity:
 
 ### 1. Action Definition Process
 
-1. **YAML Analysis**: The system will parse GitHub workflow YAML files to extract basic input structure
-2. **Manual Enhancement**: Developers will manually enhance the extracted inputs with additional metadata
+1. **YAML Analysis**: The system parses GitHub workflow YAML files to extract basic input structure
+2. **Manual Enhancement**: Developers manually enhance the extracted inputs with additional metadata
 3. **Input Type Customization**: Standard inputs can be upgraded to enhanced input types (e.g., converting a branch text input to a branch selector)
 4. **Documentation Integration**: Custom documentation can be added to provide context and guidance
+5. **Code Generation**: The SDK generates all necessary code for integration
 
 ### 2. Action Catalog Management
 
-- **Selective Inclusion**: Only carefully selected and enhanced actions will be added to the catalog
+- **Selective Inclusion**: Only carefully selected and enhanced actions are added to the catalog
 - **Quality over Quantity**: Focus on providing high-quality, well-documented actions rather than comprehensive coverage
 - **Iterative Enhancement**: Actions can be continuously improved based on user feedback and usage patterns
+- **URL-Based Integration**: Actions can be quickly integrated by providing a GitHub workflow URL
 
 ### 3. Example: QA Build Action
 
@@ -338,6 +414,7 @@ The QA Build action (qa-build.yaml) serves as an example of this approach:
 2. **Branch Input Enhancement**: The standard branch input is enhanced with a custom branch selector component
 3. **Purpose Clarification**: The action's purpose is clearly documented - creating QA environments from selected branches
 4. **Input Guidance**: Each input field includes clear guidance on its purpose and impact
+5. **Code Generation**: The SDK generates all necessary code for the action
 
 This approach ensures that the Developer Self-Service Portal provides a truly enhanced experience compared to the standard GitHub interface, with carefully crafted actions that are tailored to the specific needs of the development team.
 
