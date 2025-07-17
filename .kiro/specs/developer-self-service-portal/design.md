@@ -33,7 +33,7 @@ graph TD
 
 1. **Client-Side Only Application**: The application runs entirely in the browser on the developer's local machine, with no server-side component required. This simplifies deployment and eliminates the need for server infrastructure.
 
-2. **Local Configuration Storage**: GitHub tokens and user preferences are stored in local configuration files on the developer's machine, ensuring that sensitive credentials never leave their environment.
+2. **Local Configuration Storage**: GitHub tokens and user preferences are stored in local configuration files on the developer's machine, ensuring that sensitive credentials never leave their environment. Another option is to store it in the browser.
 
 3. **Direct GitHub API Integration**: The application communicates directly with the GitHub API using the stored token, allowing it to perform actions on behalf of the developer.
 
