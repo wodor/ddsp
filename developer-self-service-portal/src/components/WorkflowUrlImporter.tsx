@@ -1,201 +1,181 @@
 import React, { useState } from 'react';
-import { GitHubApiClient } from '../services/github';
-import { createActionFromUrl, fetchWorkflowMetadataFromUrl } from '../utils/workflowUrlParser';
-import type { CatalogAction } from '../types/catalog';
+import styled from 'styled-components';
+import mcpClient from '../services/mcpClient';
+import mcpServerManager from '../services/mcpServerManager';
+import mcpConfigService from '../services/mcpConfig';
+import type { ActionAnalysisResult } from '../types/mcpConfig';
 
-interface WorkflowUrlImporterProps {
-  githubClient: GitHubApiClient;
-  onActionCreated?: (action: CatalogAction) => void;
-}
+const Container = styled.div`
+  padding: 20px;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin-bottom: 20px;
+`;
+
+const Title = styled.h2`
+  margin-top: 0;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const Label = styled.label`
+  font-weight: 600;
+`;
+
+const Input = styled.input`
+  padding: 8px;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+`;
+
+const Button = styled.button`
+  padding: 8px 16px;
+  background-color: #2ea44f;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+
+  &:hover {
+    background-color: #2c974b;
+  }
+
+  &:disabled {
+    background-color: #94d3a2;
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #cb2431;
+  margin-top: 10px;
+`;
+
+const LoadingIndicator = styled.div`
+  margin-top: 10px;
+  color: #586069;
+`;
 
 /**
- * Component for importing GitHub workflow files from URLs
+ * Component for importing GitHub Actions from a URL
  */
-const WorkflowUrlImporter: React.FC<WorkflowUrlImporterProps> = ({ 
-  githubClient,
-  onActionCreated 
-}) => {
-  const [url, setUrl] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+const WorkflowUrlImporter: React.FC = () => {
+  const [url, setUrl] = useState('');
+  const [version, setVersion] = useState('main');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<any | null>(null);
-  const [action, setAction] = useState<CatalogAction | null>(null);
-  
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUrl(e.target.value);
-    setError(null);
-    setMetadata(null);
-    setAction(null);
-  };
-  
-  const handleFetchMetadata = async () => {
-    if (!url.trim()) {
-      setError('Please enter a GitHub workflow URL');
-      return;
-    }
-    
+  const [analysis, setAnalysis] = useState<ActionAnalysisResult | null>(null);
+
+  /**
+   * Handles form submission
+   * @param e - The form event
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
-    setMetadata(null);
-    setAction(null);
-    
+    setAnalysis(null);
+
     try {
-      const result = await fetchWorkflowMetadataFromUrl(url, githubClient);
-      
-      if (!result) {
-        throw new Error('Failed to fetch workflow metadata');
+      // Check if the MCP server is running
+      const isRunning = await mcpClient.isServerRunning();
+      if (!isRunning) {
+        // Start the MCP server if it's not running
+        await mcpServerManager.startServer();
       }
-      
-      if (!result.hasDispatchTrigger) {
-        throw new Error('This workflow does not have a workflow_dispatch trigger and cannot be used as an action');
-      }
-      
-      setMetadata(result);
+
+      // Analyze the GitHub Action
+      const result = await mcpClient.analyzeGitHubAction(url, version);
+      setAnalysis(result);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+      setError(`Failed to analyze GitHub Action: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }
   };
-  
-  const handleCreateAction = async () => {
-    if (!url.trim()) {
-      setError('Please enter a GitHub workflow URL');
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result = await createActionFromUrl(url, githubClient);
-      
-      if (!result) {
-        throw new Error('Failed to create action from workflow');
-      }
-      
-      setAction(result);
-      
-      if (onActionCreated) {
-        onActionCreated(result);
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+
   return (
-    <div className="workflow-url-importer">
-      <h2>Import GitHub Workflow</h2>
-      
-      <div className="input-group">
-        <input
-          type="text"
-          value={url}
-          onChange={handleUrlChange}
-          placeholder="Enter GitHub workflow URL (e.g., https://github.com/owner/repo/actions/workflows/workflow.yml)"
-          disabled={loading}
-          className="workflow-url-input"
-        />
-        
-        <div className="button-group">
-          <button
-            onClick={handleFetchMetadata}
-            disabled={loading || !url.trim()}
-            className="fetch-button"
-          >
-            {loading ? 'Loading...' : 'Fetch Metadata'}
-          </button>
+    <Container>
+      <Title>Import GitHub Action</Title>
+      <Form onSubmit={handleSubmit}>
+        <InputGroup>
+          <Label htmlFor="url">GitHub Action URL</Label>
+          <Input
+            id="url"
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://github.com/actions/checkout"
+            required
+          />
+        </InputGroup>
+        <InputGroup>
+          <Label htmlFor="version">Version/Tag</Label>
+          <Input
+            id="version"
+            type="text"
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            placeholder="main, v4, etc."
+          />
+        </InputGroup>
+        <Button type="submit" disabled={loading || !url}>
+          {loading ? 'Analyzing...' : 'Analyze Action'}
+        </Button>
+      </Form>
+
+      {loading && <LoadingIndicator>Analyzing GitHub Action...</LoadingIndicator>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+
+      {analysis && (
+        <div>
+          <h3>Analysis Results</h3>
+          <p>
+            <strong>Name:</strong> {analysis.name}
+          </p>
+          <p>
+            <strong>Description:</strong> {analysis.description}
+          </p>
+          <h4>Inputs</h4>
+          <ul>
+            {Object.entries(analysis.inputs).map(([name, input]) => (
+              <li key={name}>
+                <strong>{name}</strong>
+                {input.required && ' (Required)'}: {input.description}
+                {input.default && ` (Default: ${input.default})`}
+              </li>
+            ))}
+          </ul>
+          <h4>Outputs</h4>
+          {Object.keys(analysis.outputs).length > 0 ? (
+            <ul>
+              {Object.entries(analysis.outputs).map(([name, output]) => (
+                <li key={name}>
+                  <strong>{name}</strong>: {output.description}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No outputs defined</p>
+          )}
           
-          <button
-            onClick={handleCreateAction}
-            disabled={loading || !url.trim()}
-            className="create-button"
-          >
-            {loading ? 'Loading...' : 'Create Action'}
-          </button>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="error-message">
-          {error}
+          {/* This is just a placeholder - we'll implement the full UI in a later task */}
+          <Button>Continue to Configuration</Button>
         </div>
       )}
-      
-      {metadata && (
-        <div className="metadata-preview">
-          <h3>Workflow Metadata</h3>
-          <div className="metadata-content">
-            <p><strong>Name:</strong> {metadata.name}</p>
-            <p><strong>Description:</strong> {metadata.description}</p>
-            <p><strong>Has Dispatch Trigger:</strong> {metadata.hasDispatchTrigger ? 'Yes' : 'No'}</p>
-            
-            <h4>Inputs:</h4>
-            <ul className="inputs-list">
-              {metadata.inputs.map((input: any) => (
-                <li key={input.name}>
-                  <strong>{input.name}</strong>
-                  {input.required && <span className="required-badge">Required</span>}
-                  <p>{input.description}</p>
-                  {input.type && <p><strong>Type:</strong> {input.type}</p>}
-                  {input.default !== undefined && <p><strong>Default:</strong> {input.default}</p>}
-                  {input.options && (
-                    <div>
-                      <strong>Options:</strong>
-                      <ul>
-                        {input.options.map((option: string) => (
-                          <li key={option}>{option}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-      
-      {action && (
-        <div className="action-preview">
-          <h3>Created Action</h3>
-          <div className="action-content">
-            <p><strong>ID:</strong> {action.id}</p>
-            <p><strong>Name:</strong> {action.name}</p>
-            <p><strong>Description:</strong> {action.description}</p>
-            <p><strong>Category:</strong> {action.category}</p>
-            <p><strong>Repository:</strong> {action.repository}</p>
-            <p><strong>Workflow Path:</strong> {action.workflowPath}</p>
-            
-            <h4>Inputs:</h4>
-            <ul className="inputs-list">
-              {action.inputs.map((input) => (
-                <li key={input.name}>
-                  <strong>{input.name}</strong>
-                  {input.required && <span className="required-badge">Required</span>}
-                  <p>{input.description}</p>
-                  {input.type && <p><strong>Type:</strong> {input.type}</p>}
-                  {input.default !== undefined && <p><strong>Default:</strong> {input.default}</p>}
-                  {input.options && (
-                    <div>
-                      <strong>Options:</strong>
-                      <ul>
-                        {input.options.map((option) => (
-                          <li key={option}>{option}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-    </div>
+    </Container>
   );
 };
 

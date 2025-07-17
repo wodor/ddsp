@@ -6,6 +6,8 @@ The Developer Self-Service Portal (DSSP) is a web application that provides a st
 
 The portal runs locally on the developer's machine, using their GitHub token to make API calls on their behalf. It presents a curated list of GitHub Actions with improved forms and documentation, simplifying the workflow execution process. The portal focuses on providing a bespoke experience by manually adding and configuring actions with enhanced input options and contextual data that improves upon the standard GitHub interface.
 
+Additionally, the portal integrates with a Model Context Protocol (MCP) server that enables AI-powered GitHub Action wrapping capabilities, allowing developers to easily create custom wrappers for any GitHub Action directly from the portal.
+
 ## Architecture
 
 The DSSP follows a client-side architecture with the following components:
@@ -16,12 +18,16 @@ graph TD
     B --> C[Local Configuration]
     B --> D[GitHub API Client]
     D --> E[GitHub API]
+    B <--> F[GitHub Action Wrapper MCP]
+    F --> G[Local File System]
     
     subgraph "Developer's Local Machine"
     A
     B
     C
     D
+    F
+    G
     end
     
     subgraph "GitHub"
@@ -31,13 +37,13 @@ graph TD
 
 ### Key Architecture Decisions
 
-1. **Client-Side Only Application**: The application runs entirely in the browser on the developer's local machine, with no server-side component required. This simplifies deployment and eliminates the need for server infrastructure.
+1. **Client-Side Application with MCP Integration**: The application runs primarily in the browser on the developer's local machine, with an integrated MCP server for AI-powered code generation. This approach combines the simplicity of a client-side application with the power of AI-assisted development.
 
-2. **Local Configuration Storage**: GitHub tokens and user preferences are stored in local configuration files on the developer's machine, ensuring that sensitive credentials never leave their environment. Another option is to store it in the browser.
+2. **Local Configuration Storage**: GitHub tokens, user preferences, and AI API keys are stored in local configuration files on the developer's machine, ensuring that sensitive credentials never leave their environment. Another option is to store it in the browser.
 
 3. **Direct GitHub API Integration**: The application communicates directly with the GitHub API using the stored token, allowing it to perform actions on behalf of the developer.
 
-4. **Static Deployment**: The application can be served as static files from any web server or file system, making it easy to deploy and distribute.
+4. **Static Deployment with Local MCP**: The frontend application can be served as static files from any web server or file system, while the MCP server runs locally on the developer's machine, enabling AI-powered features without requiring external services.
 
 ## Components and Interfaces
 
@@ -126,6 +132,16 @@ Displays the status and details of current and past workflow executions.
 
 Allows users to manage their GitHub token and other preferences.
 
+#### 2.7 Action Wrapper Creator
+
+Provides an interface for creating custom wrappers for GitHub Actions using the MCP integration:
+
+- **Action URL Input**: Allows users to enter a GitHub Action URL to analyze
+- **Analysis Results View**: Displays the results of the action analysis
+- **Configuration Form**: Presents questions for customizing the wrapper
+- **Code Preview**: Shows the generated wrapper code for review
+- **Integration Controls**: Provides options for saving and integrating the wrapper
+
 ## Data Models
 
 ### 1. Configuration Model
@@ -168,7 +184,14 @@ Allows users to manage their GitHub token and other preferences.
           }
         }
       ],
-      "documentation": "string"
+      "documentation": "string",
+      "generatedBy": "manual|mcp",
+      "generationMetadata": {
+        "timestamp": "datetime",
+        "mcpVersion": "string",
+        "actionUrl": "string",
+        "actionVersion": "string"
+      }
     }
   ],
   "categories": [
@@ -207,6 +230,70 @@ Allows users to manage their GitHub token and other preferences.
       "downloadUrl": "string"
     }
   ]
+}
+```
+
+### 4. MCP Configuration Model
+
+```json
+{
+  "mcpServer": {
+    "enabled": "boolean",
+    "autoStart": "boolean",
+    "port": "number"
+  },
+  "aiProvider": {
+    "name": "openai|anthropic",
+    "apiKey": "string",
+    "model": "string"
+  },
+  "codeGeneration": {
+    "outputDirectory": "string",
+    "defaultErrorHandling": "throw|return",
+    "defaultInputValidation": "boolean",
+    "defaultLogging": "boolean"
+  }
+}
+```
+
+### 5. Action Analysis Model
+
+```json
+{
+  "name": "string",
+  "description": "string",
+  "inputs": {
+    "inputName": {
+      "description": "string",
+      "required": "boolean",
+      "default": "string",
+      "type": "string"
+    }
+  },
+  "outputs": {
+    "outputName": {
+      "description": "string",
+      "value": "string"
+    }
+  },
+  "questions": [
+    {
+      "id": "string",
+      "question": "string",
+      "type": "text|boolean|select|multiselect",
+      "options": ["string"],
+      "required": "boolean",
+      "context": "string"
+    }
+  ],
+  "metadata": {
+    "actionUrl": "string",
+    "version": "string",
+    "runs": {
+      "using": "string",
+      "main": "string"
+    }
+  }
 }
 ```
 
@@ -418,6 +505,79 @@ The QA Build action (qa-build.yaml) serves as an example of this approach:
 
 This approach ensures that the Developer Self-Service Portal provides a truly enhanced experience compared to the standard GitHub interface, with carefully crafted actions that are tailored to the specific needs of the development team.
 
+## GitHub Action Wrapper MCP Integration
+
+The Developer Self-Service Portal integrates with a Model Context Protocol (MCP) server that provides AI-powered GitHub Action wrapping capabilities. This integration enables developers to easily create custom wrappers for any GitHub Action directly from the portal.
+
+### 1. MCP Architecture
+
+The GitHub Action Wrapper MCP is a standalone server that runs locally on the developer's machine. It communicates with the frontend application through the Model Context Protocol, providing tools for analyzing GitHub Actions and generating wrapper code.
+
+```mermaid
+graph TD
+    A[Frontend Application] <--> B[MCP Client]
+    B <--> C[GitHub Action Wrapper MCP]
+    C --> D[GitHub Action Analyzer]
+    C --> E[Code Generator]
+    D --> F[GitHub API]
+    E --> G[Local File System]
+```
+
+### 2. MCP Components
+
+#### 2.1 GitHub Action Analyzer
+
+The GitHub Action Analyzer is responsible for fetching and analyzing GitHub Action metadata:
+
+- **Fetches action.yml/action.yaml**: Retrieves the action definition file from GitHub
+- **Parses inputs and outputs**: Extracts input and output definitions from the action
+- **Generates analysis questions**: Creates a set of questions to guide the wrapper configuration
+- **Provides metadata insights**: Analyzes the action to provide insights for better wrapping
+
+#### 2.2 Code Generator
+
+The Code Generator creates wrapper code based on the analysis and user configuration:
+
+- **Generates JavaScript/TypeScript code**: Creates wrapper functions for GitHub Actions
+- **Enhances input handling**: Adds validation, default values, and type checking
+- **Implements error handling**: Adds robust error handling based on user preferences
+- **Creates documentation**: Generates JSDoc comments and usage examples
+- **Integrates with the portal**: Ensures the generated code works seamlessly with the portal
+
+### 3. MCP Integration Workflow
+
+The integration workflow follows these steps:
+
+1. **Action Selection**: User selects a GitHub Action to wrap
+2. **Analysis**: MCP analyzes the action and generates configuration questions
+3. **Configuration**: User answers questions to customize the wrapper
+4. **Code Generation**: MCP generates wrapper code based on the configuration
+5. **Integration**: Generated code is saved to the local file system and integrated with the portal
+
+### 4. MCP Configuration
+
+The MCP server requires configuration for API keys and other settings:
+
+```json
+{
+  "aiProvider": "openai|anthropic",
+  "apiKey": "string",
+  "outputDirectory": "string",
+  "defaultOptions": {
+    "errorHandling": "throw|return",
+    "inputValidation": "boolean",
+    "logging": "boolean"
+  }
+}
+```
+
+### 5. Security Considerations
+
+- **Local Execution**: The MCP server runs locally, ensuring that sensitive information never leaves the developer's machine
+- **API Key Storage**: API keys are stored securely in the local configuration
+- **Code Review**: Generated code is presented for review before integration
+- **Sandboxed Execution**: The MCP server runs in a sandboxed environment
+
 ## Future Extensibility
 
 The design allows for future expansion to support additional APIs beyond GitHub Actions:
@@ -433,3 +593,5 @@ The design allows for future expansion to support additional APIs beyond GitHub 
 5. **Team Sharing**: Future versions could support sharing curated actions and configurations within teams.
 
 6. **Action Creation UI**: A future enhancement could include a graphical interface for creating and enhancing actions.
+
+7. **Enhanced AI Integration**: Future versions could leverage more advanced AI capabilities for code generation, documentation, and troubleshooting.

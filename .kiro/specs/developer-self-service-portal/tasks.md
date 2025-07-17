@@ -150,21 +150,57 @@
     - Fix the unused parameter warning in GitHub API client tests
     - _Requirements: All_
 
-- [ ] 12. Complete Comprehensive Tests
-  - [ ] 12.1 Implement unit tests for new components
+- [ ] 12. Implement MCP Integration
+  - [x] 12.1 Create MCP client service
+    - Implement `src/services/mcpClient.ts` for communicating with the MCP server
+    - Add methods to start and stop the MCP server process
+    - Create functions to call MCP tools for GitHub Action analysis and code generation
+    - _Requirements: 2.6, 2.7, 2.8, 2.9_
+    
+  - [ ] 12.2 Implement MCP server management
+    - Create `src/services/mcpServerManager.ts` for managing the MCP server process
+    - Add functionality to install and update the MCP server dependencies
+    - Implement automatic server startup when needed
+    - Add error handling for server startup failures
+    - _Requirements: 2.6, 2.7, 2.8, 2.9_
+  
+  - [ ] 12.3 Develop MCP configuration management
+    - Create `src/types/mcpConfig.ts` with interfaces for MCP configuration
+    - Implement `src/services/mcpConfig.ts` for managing MCP settings
+    - Add UI components for configuring AI provider and API keys
+    - _Requirements: 1.2, 1.6, 8.4, 8.5_
+  
+  - [ ] 12.4 Build Action Wrapper Creator UI
+    - Create `src/components/ActionWrapperCreator.tsx` for the main wrapper creation interface
+    - Implement `src/components/ActionAnalysisView.tsx` for displaying analysis results
+    - Add `src/components/WrapperConfigForm.tsx` for customizing the wrapper
+    - Create `src/components/CodePreview.tsx` for reviewing generated code
+    - _Requirements: 2.6, 2.7, 2.8, 2.9, 7.1, 7.2_
+  
+  - [ ] 12.5 Implement wrapper integration system
+    - Create `src/services/wrapperIntegration.ts` for saving and integrating generated wrappers
+    - Add methods to save generated code to the local file system
+    - Implement functionality to register wrappers with the action catalog
+    - _Requirements: 2.3, 2.6, 2.9_
+
+- [ ] 13. Complete Comprehensive Tests
+  - [ ] 13.1 Implement unit tests for new components
     - Add tests for action catalog components
     - Create tests for form generation and validation
     - Write tests for workflow execution and monitoring
+    - Add tests for MCP integration components
     - _Requirements: All_
   
-  - [ ] 12.2 Add integration tests
+  - [ ] 13.2 Add integration tests
     - Create tests for interactions between components
     - Test data flow between services and UI components
     - Implement mock API responses for testing
+    - Test MCP client and server communication
     - _Requirements: All_
   
-  - [ ] 12.3 Implement end-to-end tests
+  - [ ] 13.3 Implement end-to-end tests
     - Create tests for complete user flows
     - Test error handling and edge cases
     - Verify responsive behavior across different viewports
+    - Test the complete action wrapping workflow
     - _Requirements: All_
