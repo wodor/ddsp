@@ -143,7 +143,7 @@
     - Implement secure error logging that doesn't expose sensitive data
     - _Requirements: 8.4, 8.5_
 
-- [ ] 11. Fix GitHub API Client Test Issues
+- [x] 11. Fix GitHub API Client Test Issues
   - [x] 11.1 Fix global object reference errors
     - Update GitHub API client tests to properly mock global browser objects
     - Fix the unused import warning in GitHubTokenForm.test.tsx
@@ -157,14 +157,14 @@
     - Create functions to call MCP tools for GitHub Action analysis and code generation
     - _Requirements: 2.6, 2.7, 2.8, 2.9_
     
-  - [ ] 12.2 Implement MCP server management
+  - [x] 12.2 Implement MCP server management
     - Create `src/services/mcpServerManager.ts` for managing the MCP server process
     - Add functionality to install and update the MCP server dependencies
     - Implement automatic server startup when needed
     - Add error handling for server startup failures
     - _Requirements: 2.6, 2.7, 2.8, 2.9_
   
-  - [ ] 12.3 Develop MCP configuration management
+  - [x] 12.3 Develop MCP configuration management
     - Create `src/types/mcpConfig.ts` with interfaces for MCP configuration
     - Implement `src/services/mcpConfig.ts` for managing MCP settings
     - Add UI components for configuring AI provider and API keys
@@ -178,27 +178,44 @@
     - _Requirements: 2.6, 2.7, 2.8, 2.9, 7.1, 7.2_
   
   - [ ] 12.5 Implement wrapper integration system
-    - Create `src/services/wrapperIntegration.ts` for saving and integrating generated wrappers
+    - Fix issues in `src/services/wrapperIntegration.ts` for saving and integrating generated wrappers
     - Add methods to save generated code to the local file system
     - Implement functionality to register wrappers with the action catalog
+    - Add ActionDefinition type to catalog types
     - _Requirements: 2.3, 2.6, 2.9_
 
-- [ ] 13. Complete Comprehensive Tests
-  - [ ] 13.1 Implement unit tests for new components
+- [ ] 13. Fix Node.js Module Issues in Browser Environment
+  - [ ] 13.1 Fix Node.js module imports in browser
+    - Update `src/services/mcpServerManager.ts` to handle Node.js modules in browser environment
+    - Update `src/services/wrapperIntegration.ts` to handle file system operations in browser
+    - Add browser-compatible alternatives for Node.js modules
+    - Add @types/node to development dependencies
+    - _Requirements: All_
+
+- [ ] 14. Complete WorkflowUrlImporter Component
+  - [ ] 14.1 Enhance WorkflowUrlImporter UI
+    - Complete the workflow URL importer component with full configuration options
+    - Add validation for GitHub workflow URLs
+    - Implement error handling for invalid URLs
+    - Connect to wrapper integration service
+    - _Requirements: 2.6, 2.7, 2.8, 2.9_
+
+- [ ] 15. Complete Comprehensive Tests
+  - [ ] 15.1 Implement unit tests for new components
     - Add tests for action catalog components
     - Create tests for form generation and validation
     - Write tests for workflow execution and monitoring
     - Add tests for MCP integration components
     - _Requirements: All_
   
-  - [ ] 13.2 Add integration tests
+  - [ ] 15.2 Add integration tests
     - Create tests for interactions between components
     - Test data flow between services and UI components
     - Implement mock API responses for testing
     - Test MCP client and server communication
     - _Requirements: All_
   
-  - [ ] 13.3 Implement end-to-end tests
+  - [ ] 15.3 Implement end-to-end tests
     - Create tests for complete user flows
     - Test error handling and edge cases
     - Verify responsive behavior across different viewports
