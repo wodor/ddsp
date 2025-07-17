@@ -1,0 +1,233 @@
+---
+name: 'QA: Build Environment'
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_branch_update:
+        description: 'Auto Branch Update (your chosen base branch will be merged into your branch)'
+        required: false
+        type: boolean
+        default: true
+      base_branch:
+        description: 'Base Branch'
+        required: false
+        type: choice
+        options:
+        - 'develop'
+        - 'master'
+        - 'canary'
+        default: 'develop'
+      enable_cloudfront:
+        description: 'Enable Cloudfront'
+        required: false
+        type: boolean
+        default: false
+      enable_cdc:
+        description: 'Enable CDC + Audit Service'
+        required: false
+        type: boolean
+        default: false
+      config_generator_version:
+        description: 'Override Config Generator Version'
+        required: false
+        type: string
+      proxysql_version:
+        description: 'Override ProxySQL Version'
+        required: false
+        type: string
+      environment_duration:
+        description: 'How long do you need the environment?'
+        required: true
+        default: ''
+        type: choice
+        options:
+          - ''
+          - '1 hour'
+          - '1 day'
+          - '1 week'
+          - '1 month'
+          - '3 months'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  set-environment:
+    uses: ./.github/workflows/sis-set-environment-template.yaml
+    if: ${{ inputs.environment_duration != '' }}
+    with:
+      release_version_prefix: 0.0
+      build_directory: qa2_template
+    secrets:
+      sis_admin_user: ${{ secrets.SIS_ADMIN_USER }}
+      sis_admin_pass: ${{ secrets.SIS_ADMIN_PASS }}
+      org_gha_token: ${{ secrets.ARBOR_AUTOMATION_ORG_GHA_TOKEN }}
+
+  pre-flight-checks:
+    uses: ./.github/workflows/sis-qa-pre-flight-checks-template.yaml
+    needs: [ set-environment ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      auto_branch_update: ${{ inputs.auto_branch_update }}
+      base_branch: ${{ inputs.base_branch }}
+    secrets:
+      sis_admin_user: ${{ secrets.SIS_ADMIN_USER }}
+      sis_admin_pass: ${{ secrets.SIS_ADMIN_PASS }}
+
+  set-environment-status:
+    uses: ./.github/workflows/sis-update-qa-environment-status-template.yaml
+    needs: [ set-environment, pre-flight-checks ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      sis_environment: ${{ needs.set-environment.outputs.sis_environment }}
+      status: pre-provisioning
+      environment_duration: ${{ inputs.environment_duration }}
+    secrets:
+      sis_admin_user: ${{ secrets.SIS_ADMIN_USER }}
+      sis_admin_pass: ${{ secrets.SIS_ADMIN_PASS }}
+
+  build-environment:
+    uses: arbor-education/gha.workflows/.github/workflows/terraform-apply-template-v2.yaml@v0.0.126
+    needs: [ set-environment, set-environment-status ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      runner_labels: '{"group": "qa"}'
+      environment: ${{ needs.set-environment.outputs.sis_environment }}
+      working_directory: terraform/environments/qa2_template
+      cache_version: ${{ vars.CACHE_VERSION }}
+      extra_args: |
+        -var 'sis_environment=${{ needs.set-environment.outputs.sis_environment }}' \
+        -var 'enable_cloudfront=${{ inputs.enable_cloudfront }}' \
+        -var 'enable_cdc=${{ inputs.enable_cdc }}' \
+        -var 'config_generator_version=${{ inputs.config_generator_version || needs.set-environment.outputs.latest_stable_config_generator_version }}' \
+        -var 'proxysql_version=${{ inputs.proxysql_version || needs.proxysql-latest-version.outputs.proxysql_version }}'
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+      terraform_modules_key: ${{ secrets.TERRAFORM_MODULES_KEY }}
+
+  proxysql-latest-version:
+    runs-on: ubuntu-latest
+    needs: [ set-environment ]
+    outputs:
+      proxysql_version: ${{ steps.latest-proxysql-release.outputs.release }}
+    steps:
+      - name: Get latest config generator release
+        uses: rez0n/actions-github-release@v2.0
+        id: latest-proxysql-release
+        env:
+          token: ${{ secrets.ARBOR_AUTOMATION_ORG_GHA_TOKEN }}
+          repository: arbor-education/infrastructure.proxysql
+          type: stable
+
+  proxysql-deployment:
+    uses: arbor-education/gha.workflows/.github/workflows/codedeploy-run-deployment.yaml@v0.0.145
+    needs: [ set-environment, build-environment, proxysql-latest-version ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      container-name: proxysql
+      container-uri: 918612543787.dkr.ecr.eu-west-2.amazonaws.com/proxysql-test
+      container-tag: ${{ inputs.proxysql_version || needs.proxysql-latest-version.outputs.proxysql_version }}
+      environment: ${{ needs.set-environment.outputs.sis_environment }}
+      deployment_wait_in_minutes: "0"
+      deployment_role: arn:aws:iam::872355328686:role/TerraformExecutionRole
+      aws_region: eu-west-2
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+
+  setup-db:
+    needs: [ set-environment, build-environment, proxysql-deployment ]
+    uses: ./.github/workflows/sis-qa-update-admin-db.yaml
+    with:
+      db_host: proxysql-${{ needs.set-environment.outputs.sis_environment }}.internal.qa.arbor.engineering
+      environment: ${{ needs.set-environment.outputs.sis_environment }}
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+
+  config-generator-migrations:
+    uses: arbor-education/gha.workflows/.github/workflows/perform-migrations-template.yaml@v0.0.100
+    needs: [ set-environment, setup-db ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      container-name: config-generator
+      container-uri: 918612543787.dkr.ecr.eu-west-2.amazonaws.com/sis-config-generator-test
+      container-tag: ${{ inputs.config_generator_version || needs.set-environment.outputs.latest_stable_config_generator_version }}
+      environment: ${{ needs.set-environment.outputs.sis_environment }}
+      deployment_role: arn:aws:iam::872355328686:role/TerraformExecutionRole
+      run_task_command: "\"bin/console doctrine:migrations:migrate --no-interaction && bin/console config:sync:all-apps && bin/console config:sync:autoload\""
+      aws_region: eu-west-2
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+
+  config-generator-deployment:
+    uses: arbor-education/gha.workflows/.github/workflows/codedeploy-run-deployment.yaml@v0.0.145
+    needs: [ set-environment, config-generator-migrations ]
+    if: |
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      container-name: config-generator
+      container-uri: 918612543787.dkr.ecr.eu-west-2.amazonaws.com/sis-config-generator-test
+      container-tag: ${{ inputs.config_generator_version || needs.set-environment.outputs.latest_stable_config_generator_version }}
+      environment: ${{ needs.set-environment.outputs.sis_environment }}
+      deployment_wait_in_minutes: "0"
+      deployment_role: arn:aws:iam::872355328686:role/TerraformExecutionRole
+      aws_region: eu-west-2
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+
+  setup-db-users:
+    needs: [ set-environment, build-environment, proxysql-deployment ]
+    uses: ./.github/workflows/sis-update-db-users-template.yaml
+    with:
+      db_host: proxysql-${{ needs.set-environment.outputs.sis_environment }}.internal.qa.arbor.engineering
+      environment: qa
+      dry_run: false
+    secrets:
+      aws_access_key_id: ${{ secrets.IAM_USERS_AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.IAM_USERS_AWS_SECRET_ACCESS_KEY }}
+
+  update-environment-status-success:
+    uses: ./.github/workflows/sis-update-qa-environment-status-template.yaml
+    needs: [ set-environment, build-environment, setup-db-users ]
+    with:
+      sis_environment: ${{ needs.set-environment.outputs.sis_environment }}
+      status: provisioned
+    secrets:
+      sis_admin_user: ${{ secrets.SIS_ADMIN_USER }}
+      sis_admin_pass: ${{ secrets.SIS_ADMIN_PASS }}
+
+  update-environment-status-failure:
+    uses: ./.github/workflows/sis-update-qa-environment-status-template.yaml
+    needs: [ set-environment, build-environment, setup-db-users ]
+    if: |
+      failure() &&
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      sis_environment: ${{ needs.set-environment.outputs.sis_environment }}
+      status: provisioning-failed
+    secrets:
+      sis_admin_user: ${{ secrets.SIS_ADMIN_USER }}
+      sis_admin_pass: ${{ secrets.SIS_ADMIN_PASS }}
+
+  run-github-build-job:
+    uses: arbor-education/gha.workflows/.github/workflows/workflow-trigger-template.yaml@v0.0.100
+    needs: [ set-environment, update-environment-status-success ]
+    if: |
+      success() &&
+      (needs.set-environment.outputs.sis_environment != 'production' && needs.set-environment.outputs.sis_environment != 'staging' && needs.set-environment.outputs.sis_environment != 'canary')
+    with:
+      owner: ${{ github.repository_owner }}
+      repo: ${{ github.event.repository.name  }}
+      workflow_file_name: "sis-build.yaml"
+      ref: ${{ github.ref }}

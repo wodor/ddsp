@@ -4,7 +4,7 @@
 
 The Developer Self-Service Portal (DSSP) is a web application that provides a streamlined interface for developers to interact with GitHub Actions. It offers enhanced forms with contextual information, making it easier for developers to use GitHub Actions without having to navigate the GitHub interface directly.
 
-The portal runs locally on the developer's machine, using their GitHub token to make API calls on their behalf. It presents a curated list of GitHub Actions with improved forms and documentation, simplifying the workflow execution process.
+The portal runs locally on the developer's machine, using their GitHub token to make API calls on their behalf. It presents a curated list of GitHub Actions with improved forms and documentation, simplifying the workflow execution process. The portal focuses on providing a bespoke experience by manually adding and configuring actions with enhanced input options and contextual data that improves upon the standard GitHub interface.
 
 ## Architecture
 
@@ -43,6 +43,8 @@ graph TD
 
 ### 1. Core Application Components
 
+The application is structured around several core components that work together to provide the functionality required by the Developer Self-Service Portal.
+
 #### 1.1 Configuration Manager
 
 Responsible for managing the GitHub token and other user preferences.
@@ -69,13 +71,16 @@ Handles all communication with the GitHub API.
 
 #### 1.3 Action Catalog
 
-Manages the curated list of GitHub Actions available in the portal.
+Manages the curated list of GitHub Actions available in the portal. Actions are manually added to the catalog with enhanced metadata and input options.
 
 **Interfaces:**
 - `getAvailableActions()`: Gets the list of curated actions
 - `getActionDetails(action_id)`: Gets detailed information about a specific action
 - `getActionInputSchema(action_id)`: Gets the input schema for an action
 - `getActionDocumentation(action_id)`: Gets documentation for an action
+- `addAction(actionDefinition)`: Manually adds a new action to the catalog
+- `parseWorkflowYaml(yamlContent)`: Parses GitHub workflow YAML to extract inputs and metadata
+- `updateAction(actionId, actionDefinition)`: Updates an existing action in the catalog
 
 #### 1.4 Form Generator
 
@@ -146,13 +151,37 @@ Allows users to manage their GitHub token and other preferences.
       "description": "string",
       "category": "string",
       "repository": "string",
-      "inputSchema": {
-        "properties": {},
-        "required": []
-      },
+      "workflowPath": "string",
+      "inputs": [
+        {
+          "name": "string",
+          "description": "string",
+          "required": "boolean",
+          "default": "string",
+          "type": "string|boolean|choice",
+          "options": ["string"],
+          "enhanced": {
+            "type": "branch-selector|custom-select",
+            "dataSource": "github-api|manual",
+            "apiMethod": "string",
+            "apiParams": {}
+          }
+        }
+      ],
       "documentation": "string"
     }
-  ]
+  ],
+  "categories": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string"
+    }
+  ],
+  "metadata": {
+    "lastUpdated": "string",
+    "version": "string"
+  }
 }
 ```
 
@@ -249,6 +278,69 @@ Allows users to manage their GitHub token and other preferences.
 - Validate all user inputs before sending them to the GitHub API.
 - Sanitize inputs to prevent injection attacks.
 
+## Enhanced Action Input Features
+
+### 1. Branch Selector Component
+
+The portal will provide an enhanced branch selection experience that improves upon GitHub's built-in branch selector:
+
+- **Recent Branches**: Fetches and displays a list of recently updated branches from the repository
+- **Search and Filter**: Allows users to quickly search and filter branches by name
+- **Branch Metadata**: Shows additional information about branches (last commit date, author, etc.)
+- **Favorites**: Allows users to mark frequently used branches as favorites
+- **Default Branch Indicator**: Clearly indicates the default branch of the repository
+
+The branch selector will be implemented as a reusable component that can be used in any action form that requires branch selection. It will use the GitHub API to fetch branch information and provide a more user-friendly interface than the standard GitHub branch selector.
+
+### 2. Enhanced Input Types
+
+The portal will support enhanced input types that provide better user experiences:
+
+- **Branch Selector**: As described above, provides an improved branch selection experience
+- **Repository Selector**: Allows users to select from their accessible repositories
+- **User Selector**: Allows users to select from organization members or collaborators
+- **Date/Time Picker**: Provides a calendar and time selection interface
+- **Duration Selector**: Allows users to select time durations in a user-friendly way
+- **Multi-select**: Allows users to select multiple options from a list
+- **Conditional Inputs**: Shows or hides inputs based on the values of other inputs
+
+### 3. Dynamic Data Sources
+
+Input options can be populated from various sources:
+
+- **GitHub API**: Fetches data directly from GitHub API (branches, repositories, users, etc.)
+- **Manual Configuration**: Manually defined options in the action definition
+- **Computed Values**: Options generated based on other inputs or context
+- **External APIs**: Data from other systems or services (future enhancement)
+
+## Manual Action Creation Approach
+
+The Developer Self-Service Portal will take a bespoke approach to action creation, focusing on quality over quantity:
+
+### 1. Action Definition Process
+
+1. **YAML Analysis**: The system will parse GitHub workflow YAML files to extract basic input structure
+2. **Manual Enhancement**: Developers will manually enhance the extracted inputs with additional metadata
+3. **Input Type Customization**: Standard inputs can be upgraded to enhanced input types (e.g., converting a branch text input to a branch selector)
+4. **Documentation Integration**: Custom documentation can be added to provide context and guidance
+
+### 2. Action Catalog Management
+
+- **Selective Inclusion**: Only carefully selected and enhanced actions will be added to the catalog
+- **Quality over Quantity**: Focus on providing high-quality, well-documented actions rather than comprehensive coverage
+- **Iterative Enhancement**: Actions can be continuously improved based on user feedback and usage patterns
+
+### 3. Example: QA Build Action
+
+The QA Build action (qa-build.yaml) serves as an example of this approach:
+
+1. **Initial Parsing**: The system extracts the basic input structure from the workflow YAML
+2. **Branch Input Enhancement**: The standard branch input is enhanced with a custom branch selector component
+3. **Purpose Clarification**: The action's purpose is clearly documented - creating QA environments from selected branches
+4. **Input Guidance**: Each input field includes clear guidance on its purpose and impact
+
+This approach ensures that the Developer Self-Service Portal provides a truly enhanced experience compared to the standard GitHub interface, with carefully crafted actions that are tailored to the specific needs of the development team.
+
 ## Future Extensibility
 
 The design allows for future expansion to support additional APIs beyond GitHub Actions:
@@ -262,3 +354,5 @@ The design allows for future expansion to support additional APIs beyond GitHub 
 4. **Workflow Templates**: Support for saving and reusing common workflow configurations.
 
 5. **Team Sharing**: Future versions could support sharing curated actions and configurations within teams.
+
+6. **Action Creation UI**: A future enhancement could include a graphical interface for creating and enhancing actions.

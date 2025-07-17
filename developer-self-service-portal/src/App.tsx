@@ -1,11 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.css';
 import GitHubTokenForm from './components/GitHubTokenForm';
+import ActionsPage from './pages/ActionsPage';
 
 // Placeholder components - these will be implemented in future tasks
 const Home = () => <div>Developer Self-Service Portal Home</div>;
 const ConfigPage = () => <GitHubTokenForm />;
-const ActionsPage = () => <div>GitHub Actions Catalog</div>;
 const HistoryPage = () => <div>Execution History</div>;
 
 function App() {

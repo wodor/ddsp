@@ -30,6 +30,8 @@ The Developer Self-Service Portal - DSSP is a web application that provides a us
 3. WHEN new GitHub Actions are added to the curated list THEN the system SHALL make them available to users.
 4. WHEN a GitHub Action is deprecated or removed THEN the system SHALL update the curated list accordingly.
 5. WHEN the curated list grows THEN the system SHALL provide search and filtering capabilities.
+6. WHEN adding actions to the catalog THEN the system SHALL support manual curation and enhancement of actions.
+7. WHEN parsing GitHub workflow YAML THEN the system SHALL extract input structure and metadata.
 
 ### Requirement 3: Enhanced Workflow Execution Forms
 
@@ -43,6 +45,9 @@ The Developer Self-Service Portal - DSSP is a web application that provides a us
 4. WHEN validation fails THEN the system SHALL display clear error messages.
 5. WHEN a workflow has default values THEN the system SHALL pre-populate form fields with these values.
 6. WHEN a workflow has complex input requirements THEN the system SHALL provide appropriate UI controls (dropdowns, date pickers, etc.).
+7. WHEN a workflow requires branch selection THEN the system SHALL provide an enhanced branch selector component.
+8. WHEN using the branch selector THEN the system SHALL fetch and display recent branches from the repository.
+9. WHEN displaying branches THEN the system SHALL show additional metadata such as last commit date and author.
 
 ### Requirement 4: Workflow Execution and Monitoring
 

@@ -32,18 +32,25 @@
     - _Requirements: 2.2, 4.1, 4.3, 6.2, 6.3_
 
 - [ ] 4. Build Action Catalog System
-  - [ ] 4.1 Create action catalog data structure
+  - [x] 4.1 Create action catalog data structure
     - Create `src/types/catalog.ts` with interfaces for action catalog
     - Implement `src/services/catalog.ts` service for managing actions catalog
     - Add methods to load catalog from static JSON and/or GitHub API
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
   
-  - [ ] 4.2 Develop catalog UI components
+  - [x] 4.2 Develop catalog UI components
     - Create `src/components/ActionsList.tsx` for browsing available actions
     - Implement `src/components/ActionCard.tsx` for displaying action metadata
     - Add search and filtering functionality in `src/components/ActionsFilter.tsx`
     - Create `src/pages/ActionsPage.tsx` to replace the placeholder component
     - _Requirements: 2.2, 2.5, 7.1, 7.2, 7.3_
+    
+  - [x] 4.3 Implement manual action creation system
+    - Create `src/utils/workflowParser.ts` to parse GitHub workflow YAML files
+    - Implement `src/services/actionCreator.ts` for manually enhancing actions
+    - Add methods to extract input structure from workflow YAML
+    - Create sample action definition for QA Build workflow
+    - _Requirements: 2.6, 2.7_
 
 - [ ] 5. Implement Dynamic Form Generation
   - [ ] 5.1 Create form schema parser
@@ -58,6 +65,13 @@
     - Add validation error display and form submission handling
     - Create specialized components for complex inputs (dropdowns, date pickers)
     - _Requirements: 3.2, 3.3, 3.4, 3.6, 7.1, 7.2_
+    
+  - [ ] 5.3 Implement enhanced branch selector component
+    - Create `src/components/form/BranchSelector.tsx` for improved branch selection
+    - Implement GitHub API integration to fetch recent branches
+    - Add branch metadata display (commit date, author)
+    - Implement search and filtering functionality for branches
+    - _Requirements: 3.7, 3.8, 3.9_
 
 - [ ] 6. Build Workflow Execution System
   - [ ] 6.1 Implement workflow trigger functionality

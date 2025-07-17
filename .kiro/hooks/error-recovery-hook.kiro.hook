@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Error Recovery Hook",
+  "description": "Automatically continues the conversation when the agent encounters an unexpected error message",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Continue"
+  }
+}

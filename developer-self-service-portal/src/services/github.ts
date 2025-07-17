@@ -51,6 +51,7 @@ export interface RetryConfig {
 export class GitHubApiClient {
   private client: AxiosInstance;
   private retryConfig: RetryConfig;
+  private token: string;
   
   /**
    * Create a new GitHub API client
@@ -61,6 +62,7 @@ export class GitHubApiClient {
     token: string, 
     retryConfig: Partial<RetryConfig> = {}
   ) {
+    this.token = token;
     // Default retry configuration
     this.retryConfig = {
       maxRetries: 3,
@@ -575,6 +577,37 @@ export class GitHubApiClient {
     } catch (error) {
       console.error('Failed to get workflow dispatch inputs:', error);
       return null;
+    }
+  }
+  
+  /**
+   * Check if the client is authenticated with a valid token
+   * @returns Whether the client is authenticated
+   */
+  isAuthenticated(): boolean {
+    return !!this.token && this.token.length > 0;
+  }
+  
+  /**
+   * Get the content of a file from a repository
+   * @param owner Repository owner
+   * @param repo Repository name
+   * @param path Path to the file
+   * @returns The file content as a string
+   */
+  async getFileContent(owner: string, repo: string, path: string): Promise<string> {
+    try {
+      const response = await this.client.get(`/repos/${owner}/${repo}/contents/${path}`);
+      
+      // GitHub API returns file content as base64 encoded string
+      if (response.data.encoding === 'base64' && response.data.content) {
+        return atob(response.data.content.replace(/\n/g, ''));
+      }
+      
+      throw new Error('Unexpected response format');
+    } catch (error) {
+      console.error(`Failed to get file content for ${path}:`, error);
+      throw error;
     }
   }
 }
