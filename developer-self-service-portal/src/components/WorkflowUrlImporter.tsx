@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import mcpClient from '../services/mcpClient';
 import mcpServerManager from '../services/mcpServerManager';
-import mcpConfigService from '../services/mcpConfig';
 import type { ActionAnalysisResult } from '../types/mcpConfig';
 
 const Container = styled.div`

@@ -6,6 +6,7 @@ import type { ActionAnalysisResult, WrapperConfiguration } from '../types/mcpCon
  */
 export class McpClient {
   private baseUrl: string;
+  private mockRunning: boolean = false;
 
   /**
    * Creates a new MCP client
@@ -20,12 +21,25 @@ export class McpClient {
    * @returns True if the server is running, false otherwise
    */
   public async isServerRunning(): Promise<boolean> {
+    // If we're using a mock server in browser environment, return the mock state
+    if (this.mockRunning) {
+      return true;
+    }
+    
     try {
       await axios.get(`${this.baseUrl}/health`, { timeout: 1000 });
       return true;
     } catch (error) {
       return false;
     }
+  }
+  
+  /**
+   * Sets the mock server running state (for browser environments)
+   * @param running - Whether the mock server is running
+   */
+  public mockServerRunning(running: boolean): void {
+    this.mockRunning = running;
   }
 
   /**

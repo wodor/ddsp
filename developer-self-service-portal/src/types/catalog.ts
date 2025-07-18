@@ -3,6 +3,42 @@
  */
 
 /**
+ * Represents an action definition for generated wrappers
+ */
+export interface ActionDefinition {
+  /** Unique identifier for the action */
+  id: string;
+  /** Display name of the action */
+  name: string;
+  /** Short description of what the action does */
+  description: string;
+  /** Repository where the action is defined */
+  repository: string;
+  /** Path to the wrapper file */
+  wrapperPath: string;
+  /** Original GitHub Action URL */
+  originalActionUrl: string;
+  /** Input parameters for the action */
+  inputs: Record<string, {
+    description?: string;
+    required?: boolean;
+    default?: string;
+    type?: string;
+  }>;
+  /** Output parameters for the action */
+  outputs: Record<string, {
+    description?: string;
+    value?: string;
+  }>;
+  /** Metadata about the generation */
+  generationMetadata: {
+    timestamp: string;
+    mcpVersion: string;
+    actionVersion: string;
+  };
+}
+
+/**
  * Represents an input parameter for a GitHub Action
  */
 export interface ActionInput {

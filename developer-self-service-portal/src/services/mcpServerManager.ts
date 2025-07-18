@@ -1,8 +1,26 @@
-import { spawn, ChildProcess } from 'child_process';
-import path from 'path';
-import fs from 'fs';
 import type { McpConfig } from '../types/mcpConfig';
 import mcpClient from './mcpClient';
+
+// Define types for Node.js modules that may not be available in browser
+type ChildProcess = any;
+
+// Try to import Node.js modules if available
+let spawn: any;
+let path: any;
+let fs: any;
+let isNodeEnvironment = false;
+
+try {
+  // These imports will only work in a Node.js environment
+  const childProcess = require('child_process');
+  spawn = childProcess.spawn;
+  path = require('path');
+  fs = require('fs');
+  isNodeEnvironment = true;
+} catch (error) {
+  // In browser environment, these modules won't be available
+  console.log('Running in browser environment, server management will be simulated');
+}
 
 /**
  * Manager for the GitHub Action Wrapper MCP server process
@@ -11,7 +29,7 @@ export class McpServerManager {
   private serverProcess: ChildProcess | null = null;
   private config: McpConfig | null = null;
   private isStarting: boolean = false;
-  private mcpPath: string = path.resolve(process.cwd(), '../github-action-wrapper-mcp');
+  private mcpPath: string = isNodeEnvironment ? path.resolve(process.cwd(), '../github-action-wrapper-mcp') : '../github-action-wrapper-mcp';
 
   /**
    * Sets the configuration for the MCP server
@@ -52,45 +70,67 @@ export class McpServerManager {
         return;
       }
 
-      // Check if the MCP server exists
-      if (!fs.existsSync(this.mcpPath)) {
-        throw new Error(`MCP server not found at ${this.mcpPath}`);
+      // Handle differently based on environment
+      if (isNodeEnvironment) {
+        // Node.js environment - use real server process
+        
+        // Check if the MCP server exists
+        if (!fs.existsSync(this.mcpPath)) {
+          throw new Error(`MCP server not found at ${this.mcpPath}`);
+        }
+
+        // Start the MCP server
+        console.log('Starting MCP server...');
+        
+        // Set environment variables for the MCP server
+        const env = {
+          ...process.env,
+          PORT: String(this.config.mcpServer.port),
+          AI_PROVIDER: this.config.aiProvider.name,
+          AI_API_KEY: this.config.aiProvider.apiKey,
+          AI_MODEL: this.config.aiProvider.model,
+          OUTPUT_DIRECTORY: this.config.codeGeneration.outputDirectory,
+        };
+
+        // Start the server process
+        this.serverProcess = spawn('npm', ['start'], {
+          cwd: this.mcpPath,
+          env,
+          stdio: 'pipe',
+        });
+
+        // Handle server output
+        this.serverProcess.stdout?.on('data', (data) => {
+          console.log(`MCP server: ${data}`);
+        });
+
+        this.serverProcess.stderr?.on('data', (data) => {
+          console.error(`MCP server error: ${data}`);
+        });
+
+        // Handle server exit
+        this.serverProcess.on('exit', (code) => {
+          console.log(`MCP server exited with code ${code}`);
+          this.serverProcess = null;
+        });
+      } else {
+        // Browser environment - simulate server process
+        console.log('Simulating MCP server start in browser environment');
+        
+        // Create a mock server process object
+        this.serverProcess = {
+          kill: () => {
+            console.log('Simulated MCP server stopped');
+            this.serverProcess = null;
+          }
+        };
+        
+        // Simulate server startup delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Mock the server as running
+        mcpClient.mockServerRunning(true);
       }
-
-      // Start the MCP server
-      console.log('Starting MCP server...');
-      
-      // Set environment variables for the MCP server
-      const env = {
-        ...process.env,
-        PORT: String(this.config.mcpServer.port),
-        AI_PROVIDER: this.config.aiProvider.name,
-        AI_API_KEY: this.config.aiProvider.apiKey,
-        AI_MODEL: this.config.aiProvider.model,
-        OUTPUT_DIRECTORY: this.config.codeGeneration.outputDirectory,
-      };
-
-      // Start the server process
-      this.serverProcess = spawn('npm', ['start'], {
-        cwd: this.mcpPath,
-        env,
-        stdio: 'pipe',
-      });
-
-      // Handle server output
-      this.serverProcess.stdout?.on('data', (data) => {
-        console.log(`MCP server: ${data}`);
-      });
-
-      this.serverProcess.stderr?.on('data', (data) => {
-        console.error(`MCP server error: ${data}`);
-      });
-
-      // Handle server exit
-      this.serverProcess.on('exit', (code) => {
-        console.log(`MCP server exited with code ${code}`);
-        this.serverProcess = null;
-      });
 
       // Wait for the server to start
       await this.waitForServer();
@@ -117,6 +157,11 @@ export class McpServerManager {
     console.log('Stopping MCP server...');
     this.serverProcess.kill();
     this.serverProcess = null;
+    
+    // If in browser environment, update the mock state
+    if (!isNodeEnvironment) {
+      mcpClient.mockServerRunning(false);
+    }
   }
 
   /**
@@ -141,7 +186,12 @@ export class McpServerManager {
    * @returns True if the server is installed, false otherwise
    */
   public isServerInstalled(): boolean {
-    return fs.existsSync(this.mcpPath);
+    if (isNodeEnvironment) {
+      return fs.existsSync(this.mcpPath);
+    } else {
+      // In browser environment, assume the server is installed
+      return true;
+    }
   }
 
   /**

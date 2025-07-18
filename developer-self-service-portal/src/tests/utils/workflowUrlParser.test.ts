@@ -22,6 +22,15 @@ on:
         required: true
         default: 'main'
 `),
+        // Add missing methods that might be required
+        validateToken: vi.fn().mockResolvedValue(true),
+        getRepositories: vi.fn().mockResolvedValue([]),
+        getWorkflows: vi.fn().mockResolvedValue([]),
+        triggerWorkflow: vi.fn().mockResolvedValue({}),
+        getWorkflowRuns: vi.fn().mockResolvedValue([]),
+        getWorkflowRunDetails: vi.fn().mockResolvedValue({}),
+        downloadArtifact: vi.fn().mockResolvedValue({}),
+        getBranches: vi.fn().mockResolvedValue([])
       };
     }),
   };
@@ -143,7 +152,7 @@ describe('workflowUrlParser', () => {
       
       // Verify that the ActionCreatorService was called with the correct parameters
       expect(ActionCreatorService).toHaveBeenCalledWith(githubClient);
-      expect(ActionCreatorService.mock.results[0].value.createActionFromWorkflow).toHaveBeenCalledWith(
+      expect(vi.mocked(ActionCreatorService).mock.results[0].value.createActionFromWorkflow).toHaveBeenCalledWith(
         'owner',
         'repo',
         '.github/workflows/workflow.yml'

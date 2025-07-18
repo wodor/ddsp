@@ -117,3 +117,9 @@ export default ComponentName;
 - Implement virtualization for long lists
 - Optimize bundle size with code splitting
 - Use proper keys for list items
+
+## Use context7 for documentation
+
+- Use context7 mcp to get info on how to use frameworks and libraries
+
+
